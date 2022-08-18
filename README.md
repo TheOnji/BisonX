@@ -1,0 +1,29 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<style>
+p {
+	width: 500px;
+}
+</style>
+</head>
+<h1> BisonX </h1>
+
+<h3> Introduction </h3>
+	<p> 
+		BisonX is the third iteration of the Bison optimization algorithm for finding the best in slot (BiS) gear in FFXIV. The second iteration of Bison tried to implement a full and functioning user interface for the user to interact with the program. However, the scope quickly expanded beyond what was proginally intended. Subsequently, the project was iterated into BisonX which is intended to be a command line python program with a more optimized processing algorithm and a fully integrated SQL database. 
+	</p>
+	
+<h3>Contributions </h3>
+<p>Currently this is a solo project. Feel free to let me know if you are interested in contributing should I accept more contributors in the future. </p>
+
+<h3> To Do List </h3>
+	<ol>
+		<li> Enable multiprocessing of algorithm </li>
+		<li> Improve integration with SQLXIV </li>
+		<li> Add database maintanance functions to SQLXIV such as add a rotation etc. </li>
+	</ol>
+
+
+
+</html>
