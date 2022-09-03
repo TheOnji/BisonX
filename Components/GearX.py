@@ -2,9 +2,6 @@ import numpy as np
 import json
 
 
-DEBUG = True
-
-
 def main():
     Gear_set = Gearset('GNB')
     Gear_ID = [2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1]
@@ -18,7 +15,6 @@ def main():
 
 
 class Gearset():
-
     def __init__(self, Job):
         self.null = {'Materia_Matrix':np.zeros([7, 7]),
                     'AllowedMateria':[{},{},{},{},{},{},{},{},{},{},{},{}],

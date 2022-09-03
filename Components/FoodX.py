@@ -1,32 +1,4 @@
-_Debug = False
-
-import logging
 import json
-
-#---------------Logger setup----------------#
-logger = logging.getLogger(__name__)
-logger.propagate = False
-
-if not logger.hasHandlers():
-
-    if _Debug == True:
-        loglevel = logging.DEBUG 
-    else:
-        loglevel = logging.ERROR
-
-    logger.setLevel(loglevel)
-    formatter = logging.Formatter('%(levelname)s:%(name)s:%(message)s')
-
-    file_handler = logging.FileHandler(f"Bison2.log")
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(logging.ERROR)
-    logger.addHandler(file_handler)
-
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
-    stream_handler.setLevel(loglevel)
-    logger.addHandler(stream_handler)
-#-----------Logger setup finished------------#
 
 
 def main():
@@ -34,8 +6,6 @@ def main():
 
 
 class Menu():
-    logger.debug('\n Food menu created \n')
-
     def __init__(self, Food_ID = 1):
         with open('Food_database.json') as file:
             self.database = json.load(file)

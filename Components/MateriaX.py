@@ -1,31 +1,4 @@
-_Debug = False
-
-import logging
-
-#---------------Logger setup----------------#
-logger = logging.getLogger(__name__)
-logger.propagate = False
-
-if not logger.hasHandlers():
-
-    if _Debug == True:
-        loglevel = logging.DEBUG 
-    else:
-        loglevel = logging.ERROR
-
-    logger.setLevel(loglevel)
-    formatter = logging.Formatter('%(levelname)s:%(name)s:%(message)s')
-
-    file_handler = logging.FileHandler(f"Bison2.log")
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(logging.ERROR)
-    logger.addHandler(file_handler)
-
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
-    stream_handler.setLevel(loglevel)
-    logger.addHandler(stream_handler)
-#-----------Logger setup finished------------#
+import json
 
 
 def main():
@@ -62,7 +35,3 @@ class Materia():
 
 if __name__ == '__main__':
     main()
-
-
-
-
