@@ -7,9 +7,9 @@ from bs4 import BeautifulSoup as bfs
 
 
 def main():
+    print('Main')
     db = database('XIV.db')
-    #db.update_urls()
-    db.update_equipment()
+    db.update_food()
     db.close()
 
 
@@ -53,6 +53,17 @@ class database:
                 Substat2Value integer
                 )""")
 
+            self.c.execute("""CREATE TABLE IF NOT EXISTS Food(
+                Name text,
+                iLVL integer,
+                PercentBonus integer,
+                VitalityMax integer,
+                Stat1 text,
+                Stat1Max integer,
+                Stat2 text, 
+                Stat2Max integer
+                )""")
+
             self.c.execute("""CREATE TABLE IF NOT EXISTS Weapons(
                 Name text,
                 Type text,
@@ -70,14 +81,6 @@ class database:
                 SubstatLimit integer,
                 SubstatPool integer
                 )""")
-'''
-            self.c.execute("""CREATE TABLE IF NOT EXISTS PotencyMaps(
-                DirectPhysical int,
-                DoTPhysical int,
-                )""")
-'''
-
-    ###------------------------------------------------------------------------------###
 
     def close(self):
         self.connection.close()
@@ -96,6 +99,13 @@ class database:
         with self.connection:
             self.c.execute("DELETE FROM Equipment WHERE Name = :Name",{'Name':Values[0]})
             self.c.execute("INSERT INTO Equipment VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (Values))
+
+    ###------------------------------------------------------------------------------###
+
+    def insert_Food(self, *Values):
+        with self.connection:
+            self.c.execute("DELETE FROM Food WHERE Name = :Name",{'Name':Values[0]})
+            self.c.execute("INSERT INTO Food VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (Values))
 
     ###------------------------------------------------------------------------------###
 
@@ -165,12 +175,66 @@ class database:
 
     ###------------------------------------------------------------------------------###
 
-    def update_food(self, min_iL = "", max_iL = ""):
-        pass
+    def update_food(self):
+        print(f"Updating food...")
+        with self.connection:
+            self.c.execute("SELECT URL FROM URLs WHERE Category = 'Food' AND Type = 'Specific'")
+            URLs = self.c.fetchall()
+
+        for url in tqdm(URLs):    
+            url = list(url)[0]
+            source = requests.get(url).text
+            soup = bfs(source, 'lxml')
+
+            Name = soup.find('h2', class_="db-view__item__text__name").text.strip().split("\n")[0]
+            iLVL = soup.find('div', class_="db-view__item_level").text.split(' ')[2]
+            
+            Bonuses = soup.find('ul', class_="sys_hq_element").text
+
+            #Ignore crafting food
+            if "Craftsmanship" in Bonuses or "CP" in Bonuses or "Perception" in Bonuses or "Gathering" in Bonuses:
+                continue
+
+            #Extract data from soup object
+            secondstat = False
+            for bonus in Bonuses.split("\n"):
+                if len(bonus) < 1:
+                    continue
+                if "Vitality" in bonus:
+                    VitalityMax = bonus.split("Max ")[1].split(")")[0]
+                    PercentBonus = bonus.split("+")[1].split("%")[0]
+                elif secondstat == False: 
+                    Stat1_pre = bonus.split(" +")[0]
+                    Stat1Max_pre = bonus.split("Max ")[1].split(")")[0]
+                    secondstat = True
+                elif secondstat == True: 
+                    Stat2_pre = bonus.split(" +")[0]
+                    Stat2Max_pre = bonus.split("Max ")[1].split(")")[0]
+
+            #Set major stat to stat1 etc
+            if Stat1Max_pre > Stat2Max_pre:
+                Stat1 = Stat1_pre
+                Stat1Max = Stat1Max_pre
+                Stat2 = Stat2_pre
+                Stat2Max = Stat2Max_pre
+            else:
+                Stat1 = Stat2_pre
+                Stat1Max = Stat2Max_pre
+                Stat2 = Stat1_pre
+                Stat2Max = Stat1Max_pre
+
+            self.insert_Food(Name,
+                           iLVL,
+                           PercentBonus,
+                           VitalityMax,
+                           Stat1,
+                           Stat1Max,
+                           Stat2,
+                           Stat2Max)
 
     ###------------------------------------------------------------------------------###
 
-    def update_urls(self, iLVL_gear = [600, 999], iLVL_food = [580, 999]):
+    def update_urls(self, iLVL_gear = [620, 999], iLVL_food = [600, 999]):
         print(f"Updating URLs...")
 
         Equipment = [('Weapon', 'Page', 'Entry Point', "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/?category2=1"),
