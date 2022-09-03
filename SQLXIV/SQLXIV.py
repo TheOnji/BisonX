@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup as bfs
 def main():
     print('Main')
     db = database('XIV.db')
-    db.update_food()
+    db.update_actions()
     db.close()
 
 
@@ -21,14 +21,15 @@ class database:
         with self.connection:
             self.c.execute("""CREATE TABLE IF NOT EXISTS Actions(
                 Job text,
-                Action text,
+                Name text,
                 Type text,
                 Cast text,
                 Recast text,
+                Cost text,
                 Effect text,
                 DamageType text,
-                Directpotency integer,
-                DoTpotency integer
+                Directpotency text,
+                DoTpotency text
                 )""")
 
             self.c.execute("""CREATE TABLE IF NOT EXISTS URLs(
@@ -89,9 +90,9 @@ class database:
 
     def insert_action(self, *Values):
         with self.connection:
-            self.c.execute("DELETE FROM Actions WHERE Job = :Job AND Action = :Action",
-                {'Job':Values[0], 'Action':Values[1]})
-            self.c.execute("INSERT INTO Actions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",(Values))
+            self.c.execute("DELETE FROM Actions WHERE Job = :Job AND Name = :Name",
+                {'Job':Values[0], 'Name':Values[1]})
+            self.c.execute("INSERT INTO Actions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",(Values))
 
     ###------------------------------------------------------------------------------###
 
@@ -110,12 +111,78 @@ class database:
     ###------------------------------------------------------------------------------###
 
     def update_all(self):
-        pass
+        self.update_food()
+        self.update_equipment()
+        self.update_actions() #Not finished - Experimental parsing
 
     ###------------------------------------------------------------------------------###
 
     def update_actions(self):
-        pass
+        print('Updating Actions database...')
+        with self.connection:
+            self.c.execute("SELECT URL FROM URLs WHERE Category = 'JobGuide' AND Type = 'Specific'")
+            URLs = self.c.fetchall()
+
+        for url in tqdm(URLs):
+            url = list(url)[0]
+            source = requests.get(url).text
+            soup = bfs(source, 'lxml')
+
+            pve_actions = soup.find('tbody', class_="job__tbody")
+            pve_actions_list = pve_actions.find_all('tr')
+
+            Job = url.split("/")[-1]
+
+            for action in pve_actions_list:
+                if "pve_action" not in str(action):
+                    continue
+
+                Name = action.find('td', class_="skill").find('strong').text
+                Type = action.find('td', class_="classification").text
+                Cast = action.find('td', class_="cast").text
+                Recast = action.find('td', class_="recast").text
+                Cost = action.find('td', class_="cost").text
+                Effect = action.find('td', class_="content").text.replace("\n","").lstrip()
+
+                #Now parse skill potency etc
+                Magical_keywords = ["unaspected", "aspected", "magical", "fire", "wind", "earth", "water", "ice", "lightning"]
+                Magical = any([kw in Effect for kw in Magical_keywords])
+
+                DamageType = "-"
+                DirectPotency = "-"
+                DoTPotency = "-"
+
+                if "potency" in Effect:
+                    if Magical:
+                        DamageType = 'Magical'
+                    else:
+                        DamageType = 'Physical'
+    
+                    s = ""
+                    if "Combo Potency" in Effect:
+                        s = Effect.split("Combo Potency: ")[1] 
+                    elif "a potency of " in Effect:
+                        s = Effect.split("a potency of ")[1]
+
+                    if not s == "":
+                        Potency = ""
+                        for char in s:
+                            if char.isdigit():
+                                Potency += char
+                            else:
+                                break
+                        DirectPotency = Potency
+                
+                self.insert_action(Job,
+                                    Name,
+                                    Type,
+                                    Cast,
+                                    Recast,
+                                    Cost,
+                                    Effect,
+                                    DamageType,
+                                    DirectPotency,
+                                    DoTPotency)
 
     ###------------------------------------------------------------------------------###
 
@@ -234,7 +301,7 @@ class database:
 
     ###------------------------------------------------------------------------------###
 
-    def update_urls(self, iLVL_gear = [620, 999], iLVL_food = [600, 999]):
+    def update_urls(self, iLVL_gear = [630, 999], iLVL_food = [610, 999]):
         print(f"Updating URLs...")
 
         Equipment = [('Weapon', 'Page', 'Entry Point', "https://na.finalfantasyxiv.com/lodestone/playguide/db/item/?category2=1"),
