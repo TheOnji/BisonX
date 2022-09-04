@@ -5,11 +5,15 @@ import sqlite3
 from tqdm import tqdm
 from bs4 import BeautifulSoup as bfs
 
+import pmapUI
+
 
 def main():
     print('Main')
     db = database('XIV.db')
-    db.update_actions()
+    db.update_pmap()
+    #db.update_actions()
+    #stuff = db.get_Equipment(Job='GNB', Type='Body', Keyword='Asphodelos')
     db.close()
 
 
@@ -65,22 +69,46 @@ class database:
                 Stat2Max integer
                 )""")
 
-            self.c.execute("""CREATE TABLE IF NOT EXISTS Weapons(
-                Name text,
-                Type text,
-                Relic boolean,
-                iLVL integer,
-                Jobs text,
-                Materia_Sockets integer,
-                MainStat text,
-                MainStatValue integer,
-                Vitality integer,
-                Substat1 text,
-                Substat1Value integer,
-                Substat2 text,
-                Substat2Value integer
-                SubstatLimit integer,
-                SubstatPool integer
+            self.c.execute("""CREATE TABLE IF NOT EXISTS pmaps(
+                Job text,
+                Buff1 integer,
+                Buff2 integer,
+                #
+                APotency integer,
+                Potency integer,
+                PotencyDoT integer,
+                Mpotency integer,
+                MpotencyDoT integer,
+                #
+                APotency1 integer,
+                Potency1 integer,
+                PotencyDoT1 integer,
+                Mpotency1 integer,
+                MpotencyDoT1 integer,
+                #
+                APotency2 integer,
+                Potency2 integer,
+                PotencyDoT2 integer,
+                Mpotency2 integer,
+                MpotencyDoT2 integer,
+                #
+                APotency12 integer,
+                Potency12 integer,
+                PotencyDoT12 integer,
+                Mpotency12 integer,
+                MpotencyDoT12 integer,
+                #
+                APotencyCrit integer,
+                PotencyCrit integer,
+                PotencyDoTCrit integer,
+                MpotencyCrit integer,
+                MpotencyDoTCrit integer,
+                #
+                APotencyCDH integer,
+                PotencyCDH integer,
+                PotencyDoTCDH integer,
+                MpotencyCDH integer,
+                MpotencyDoTCDH integer
                 )""")
 
     def close(self):
@@ -107,6 +135,128 @@ class database:
         with self.connection:
             self.c.execute("DELETE FROM Food WHERE Name = :Name",{'Name':Values[0]})
             self.c.execute("INSERT INTO Food VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (Values))
+
+    ###------------------------------------------------------------------------------###
+    # Returns dictionary of equipment using 3 arguments
+    def get_Equipment(self, Job, Type, Keyword):
+        sjob = f"%{Job}%"
+        sKeyword = f"%{Keyword}%"
+        with self.connection:
+            self.c.execute("""SELECT json_object(
+                            'Name', Name,
+                            'iLVL', iLVL,
+                            'MateriaSockets', Materia_Sockets,
+                            'MainStat', MainStat,
+                            'MainStatValue', MainStatValue,
+                            'Vitality', Vitality,
+                            'Substat1', Substat1,
+                            'Substat1Value', Substat1Value,
+                            'Substat2', Substat2,
+                            'Substat2Value', Substat2Value
+                            ) FROM Equipment WHERE Jobs LIKE :Job 
+                            AND Type = :Type 
+                            AND Name LIKE :kw""",{'Job':sjob, 'Type': Type, 'kw':sKeyword})
+            res = self.c.fetchall()
+            if not len(res) == 1:
+                raise ValueError('[SQLXIV] Error in "get_Equipment. Arguments yielded multiple results in database.')
+        
+        #Convert to dictionary
+        res = list(res[0])[0]
+        res = json.loads(res)
+
+        return res
+
+    ###------------------------------------------------------------------------------###
+
+    def update_pmap(self):
+        Job = input('Job: ')
+        Time = float(input('Encounter length (seconds): '))
+
+        print('\n Personal buffs \n')
+        Buff1_Name = input('Buff 1 name: ')
+        Buff2_Name = input('Buff 2 name: ')
+        Buff1 = input(f"Percent damage increase from {Buff1_Name}: ")
+        Buff2 = input(f"Percent damage increase from {Buff2_Name}: ")
+        
+        print('\n Potency with no personal buffs \n')
+        APotency = float(input('Auto Attack Potency: '))/Time
+        Potency = float(input('Direct Physical Potency: '))/Time
+        PotencyDoT = float(input('DoT Physical Potency: '))/Time
+        Mpotency = float(input('Direct Magical Potency: '))/Time
+        MpotencyDoT = float(input('DoT Magical Potency: '))/Time
+
+        print(f"\n Potency under {Buff1_Name} \n")
+        APotency1 = float(input('Auto Attack Potency: '))/Time
+        Potency1 = float(input('Direct Physical Potency: '))/Time
+        PotencyDoT1 = float(input('DoT Physical Potency: '))/Time
+        Mpotency1 = float(input('Direct Magical Potency: '))/Time
+        MpotencyDoT1 = float(input('DoT Magical Potency: '))/Time
+
+        print(f"\n Potency under {Buff2_Name} \n")
+        APotency2 = float(input('Auto Attack Potency: '))/Time
+        Potency2 = float(input('Direct Physical Potency: '))/Time
+        PotencyDoT2 = float(input('DoT Physical Potency: '))/Time
+        Mpotency2 = float(input('Direct Magical Potency: '))/Time
+        MpotencyDoT2 = float(input('DoT Magical Potency: '))/Time
+
+        print(f"\n Potency under both {Buff1_Name} and {Buff2_Name} \n")
+        APotency12 = float(input('Auto Attack Potency: '))/Time
+        Potency12 = float(input('Direct Physical Potency: '))/Time
+        PotencyDoT12 = float(input('DoT Physical Potency: '))/Time
+        Mpotency12 = float(input('Direct Magical Potency: '))/Time
+        MpotencyDoT12 = float(input('DoT Magical Potency: '))/Time
+        
+        print('\n Potency with guaranteed critical hit \n')
+        APotencyCrit = float(input('Auto Attack Potency: '))/Time
+        PotencyCrit = float(input('Direct Physical Potency: '))/Time
+        PotencyDoTCrit = float(input('DoT Physical Potency: '))/Time
+        MpotencyCrit = float(input('Direct Magical Potency: '))/Time
+        MpotencyDoTCrit = float(input('DoT Magical Potency: '))/Time
+
+        with self.connection:
+            self.c.execute("DELETE FROM pmaps WHERE Job = :Job",{'Job':Job})
+            self.c.execute("""INSERT INTO pmaps VALUES 
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",(
+                Job,
+                Buff1,
+                Buff2,
+                 #Normal
+                APotency, 
+                Potency,
+                PotencyDoT,
+                Mpotency,
+                MpotencyDoT,
+                 #Buff 1
+                APotency1,
+                Potency1,
+                PotencyDoT1,
+                Mpotency1,
+                MpotencyDoT1,
+                 #Buff 2
+                APotency2, 
+                Potency2,
+                PotencyDoT2,
+                Mpotency2,
+                MpotencyDoT2,
+                #Both buffs
+                APotency12,  
+                Potency12,
+                PotencyDoT12,
+                Mpotency12,
+                MpotencyDoT12,
+                 #Crit
+                APotencyCrit,  
+                PotencyCrit,
+                PotencyDoTCrit,
+                MpotencyCrit,
+                MpotencyDoTCrit
+                 #Crit direct hit
+                APotencyCDH,  
+                PotencyCDH,
+                PotencyDoTCDH,
+                MpotencyCDH,
+                MpotencyDoTCDH))
+
 
     ###------------------------------------------------------------------------------###
 
@@ -199,6 +349,8 @@ class database:
 
             Name = soup.find('h2', class_= "db-view__item__text__name").text.strip()  
             Type = soup.find('p', class_="db-view__item__text__category").text
+            if "Arm" in Type:
+                Type = "Weapon"
             iLVL = int(soup.find('div', class_="db-view__item_level").text.split('Item Level ')[1])
             Jobs = soup.find('div', class_="db-view__item_equipment__class").text
             Materia_Sockets = str(soup.find('ul', class_='db-view__materia_socket')).count('socket normal')
